@@ -1,39 +1,68 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const routes = require('./routes');
-const { errors } = require('celebrate');
+const path = require('path');
+const cors = require('cors');
+const { errors: celebrateErrors } = require('celebrate');
+
+const { signup, signin, getCurrentUser } = require('./controllers/users');
+const usersRouter = require('./routes/users');
+const articlesRouter = require('./routes/articles');
+const auth = require('./middlewares/auth');
 const errorHandler = require('./middlewares/errors');
 
-const { PORT = 3000, MONGO_URI } = process.env;
-
 const app = express();
+const { PORT = 3000, MONGO_URI, NODE_ENV } = process.env;
 
-// Middleware para JSON
+// Middleware JSON
 app.use(express.json());
 
-// Rutas
-app.use('/', routes);
+// Configurar CORS
+const allowedOrigins = [
+  'https://news-exp.chickenkiller.com',
+  'http://localhost:3000',
+];
+app.use(cors({ origin: allowedOrigins }));
+app.options('*', cors());
 
-// Middleware Celebrate para validaciones
-app.use(errors());
+// --- RUTAS PÚBLICAS --- //
+app.post('/signup', signup);
+app.post('/signin', signin);
 
-// Middleware centralizado de errores
+// --- MIDDLEWARE DE AUTORIZACIÓN --- //
+app.use(auth);
+
+// --- RUTAS PRIVADAS --- //
+app.use('/users', usersRouter);
+app.use('/articles', articlesRouter);
+
+// --- SERVIR FRONTEND EN PRODUCCIÓN --- //
+if (NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'frontend', 'build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
+  });
+}
+
+// --- MIDDLEWARE CELEBRATE Y ERRORES --- //
+app.use(celebrateErrors());
 app.use(errorHandler);
 
-// Middleware 404
+// --- MIDDLEWARE 404 --- //
 app.use((req, res) => res.status(404).send({ message: 'Ruta no encontrada' }));
 
-// Verificar que la variable de entorno se está leyendo
-console.log('MONGO_URI =', MONGO_URI);
-
-// Conectar a MongoDB y arrancar servidor
+// --- CONEXIÓN A MONGODB Y ARRANQUE DEL SERVIDOR --- //
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => {
-  console.log('✅ Conectado a MongoDB');
-  app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
-})
-.catch(err => console.error('❌ Error al conectar a MongoDB:', err));
+  .then(() => {
+    console.log('✅ Conectado a MongoDB');
+    app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+  })
+  .catch(err => {
+    console.error('❌ Error al conectar a MongoDB:', err);
+    process.exit(1);
+  });
+
+module.exports = app;
