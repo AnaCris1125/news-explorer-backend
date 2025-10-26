@@ -1,1 +1,1 @@
-# news-explorer-backend
+Dominio a mi app: www.news-exp.chickenkiller.com
