@@ -14,7 +14,7 @@ const errorHandler = require('./middlewares/errors');
 const app = express();
 const { PORT = 3000, MONGO_URI, NODE_ENV } = process.env;
 
-// Middleware JSON
+// --- MIDDLEWARES ---
 app.use(express.json());
 
 // Configurar CORS
@@ -25,33 +25,34 @@ const allowedOrigins = [
 app.use(cors({ origin: allowedOrigins }));
 app.options('*', cors());
 
-// --- RUTAS PÚBLICAS --- //
+// --- RUTAS PÚBLICAS ---
 app.post('/signup', signup);
 app.post('/signin', signin);
 
-// --- MIDDLEWARE DE AUTORIZACIÓN --- //
+// --- AUTORIZACIÓN ---
 app.use(auth);
 
-// --- RUTAS PRIVADAS --- //
+// --- RUTAS PRIVADAS ---
 app.use('/users', usersRouter);
 app.use('/articles', articlesRouter);
 
-// --- SERVIR FRONTEND EN PRODUCCIÓN --- //
-if (NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'frontend', 'build')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
-  });
-}
+// --- SERVIR FRONTEND EN PRODUCCIÓN ---
+const distPath = path.join(__dirname, '..', 'frontend', 'dist');
+app.use(express.static(distPath));
 
-// --- MIDDLEWARE CELEBRATE Y ERRORES --- //
+// SPA routing: todas las rutas apuntan a index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+// --- MIDDLEWARE CELEBRATE Y ERRORES ---
 app.use(celebrateErrors());
 app.use(errorHandler);
 
-// --- MIDDLEWARE 404 --- //
+// --- MIDDLEWARE 404 ---
 app.use((req, res) => res.status(404).send({ message: 'Ruta no encontrada' }));
 
-// --- CONEXIÓN A MONGODB Y ARRANQUE DEL SERVIDOR --- //
+// --- CONEXIÓN A MONGODB Y ARRANQUE DEL SERVIDOR ---
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
