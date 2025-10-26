@@ -12,7 +12,7 @@ const auth = require('./middlewares/auth');
 const errorHandler = require('./middlewares/errors');
 
 const app = express();
-const { PORT = 3000, MONGO_URI, NODE_ENV } = process.env;
+const { PORT = 3000, MONGO_URI } = process.env;
 
 // --- MIDDLEWARES ---
 app.use(express.json());
@@ -23,7 +23,6 @@ const allowedOrigins = [
   'http://localhost:3000',
 ];
 app.use(cors({ origin: allowedOrigins }));
-app.options('*', cors());
 
 // --- RUTAS PÚBLICAS ---
 app.post('/signup', signup);
@@ -36,12 +35,12 @@ app.use(auth);
 app.use('/users', usersRouter);
 app.use('/articles', articlesRouter);
 
-// --- SERVIR FRONTEND EN PRODUCCIÓN ---
+// --- SERVIR FRONTEND ---
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');
 app.use(express.static(distPath));
 
 // SPA routing: todas las rutas apuntan a index.html
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
